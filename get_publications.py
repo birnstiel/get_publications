@@ -126,7 +126,8 @@ if DEVKEY == '':
 print('Script will create publication list (file `{}`) for author: {} {}\n'.\
       format(os.path.splitext(FILE)[0] + '.' + RUN, AUTHOR_F, AUTHOR))
 if OPENACCESS:
-    from oa_info import OA_INPRESS
+    if IN_PRESS:
+        from oa_info import OA_INPRESS
     print('- Including open access information')
 
 if CITATIONS:
