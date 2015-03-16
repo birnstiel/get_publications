@@ -87,6 +87,15 @@ if __name__ == '__main__':
     PARSER.add_argument('-l', '--latex',\
         help='latex command, default=' + ' '.join(LATEX),\
         type=str, default=' '.join(LATEX))
+    PARSER.add_argument('-ys', '--year-start',\
+        help='include only publications after (including) this year',\
+        type=float, default=-1e6)
+    PARSER.add_argument('-ye', '--year-end',\
+        help='include only publications before (including) this year',\
+        type=float, default=1e6)
+    PARSER.add_argument('-lid', '--library-id',\
+        help='Use personal library with this name instead of a general query',\
+        type=str, default=None)
     ARGS = PARSER.parse_args()
 
     OPENACCESS = ARGS.openaccess
@@ -232,19 +241,30 @@ print('Done ')
 #
 sys.stdout.write('- getting publication data from NASA ADS ... ')
 sys.stdout.flush()
-URL = r'http://adslabs.org/adsabs/api/search/?q=author:"' + AUTHOR + ',+' +\
-    AUTHOR_F[0] + '"&filter=property:refereed&rows=200&dev_key=' + DEVKEY
+if ARGS.library_id==None:
+    URL = r'http://adslabs.org/adsabs/api/search/?q=author:"' + AUTHOR + ',+' +\
+        AUTHOR_F[0] + '"&filter=property:refereed&rows=200&dev_key=' + DEVKEY
+else:
+    URL = r'http://adslabs.org/adsabs/api/search/?dev_key='+DEVKEY+'&q=%2A%3A%2A&bigquery='+ARGS.library_id
 PUBS = json.load(urllib2.urlopen(URL))['results']['docs']
 print('Done')
 #
-# apply the filter
+# apply the database and year filters
 #
 N_PUBS = len(PUBS)
 if DATABASE != '':
     PUBS = [p for p in PUBS if any([db.lower() == DATABASE.lower() \
                                     for db in p['database']])]
-if len(PUBS) < N_PUBS:
-    print('- FILTERED OUT {:d} PUBLICATIONS'.format(N_PUBS - len(PUBS)))
+if len(PUBS) < N_PUBS: print('- DATABASE FILTER: FILTERED OUT {:d} PUBLICATIONS'.format(N_PUBS - len(PUBS)))
+
+N_PUBS = len(PUBS)
+PUBS = [p for p in PUBS if float(p['year'])>=ARGS.year_start]
+if len(PUBS) < N_PUBS: print('- START YEAR FILTER: FILTERED OUT {:d} PUBLICATIONS'.format(N_PUBS - len(PUBS)))
+
+N_PUBS = len(PUBS)
+PUBS = [p for p in PUBS if float(p['year'])<=ARGS.year_end]
+if len(PUBS) < N_PUBS: print('- END YEAR FILTER: FILTERED OUT {:d} PUBLICATIONS'.format(N_PUBS - len(PUBS)))
+
 #
 # open file to write out results
 #
@@ -274,9 +294,10 @@ for pub in PUBS:
     #
     # boldface author if initial matches
     #
-    idx = authors.index(AUTHOR)
-    if pub['author'][idx].split(',')[1][1] == AUTHOR_F[0]:
-        authors[idx] = r'\textbf{' + authors[idx] + '}'
+    if AUTHOR in authors:
+        idx = authors.index(AUTHOR)
+        if pub['author'][idx].split(',')[1][1] == AUTHOR_F[0]:
+            authors[idx] = r'\textbf{' + authors[idx] + '}'
     #
     # format with commas between, and finish with ", and lastauthor"
     #
@@ -291,12 +312,21 @@ for pub in PUBS:
     # fix special characters in the title
     #
     title = pub['title'][0]
-    specials = ['{', '}', '_', '$', '^']
-    for c in specials:
-        title = title.replace(c, '\\' + c)
+    #specials = ['{', '}', '_', '$', '^']
+    #for c in specials:
+    #    title = title.replace(c, '\\' + c)
+    title=re.sub('<sub>(.*?)</sub>',r'$_{\1}$',title,flags=re.IGNORECASE)
+    title=re.sub('<sup>(.*?)</sup>',r'$^{\1}$',title,flags=re.IGNORECASE)
+    if '$' not in title:
+        title=re.sub('(_[^ ]*)',r'$\1$',title)
+        title=re.sub('\{\^(.*?)\}',r'$^{\1}$',title)
+        print(title)
     title = r'\textit{' + title + '}'
     string += title + ', '
-    journal = replace_journal_name(pub['pub'])
+    if 'pub' in pub.keys():
+        journal = replace_journal_name(pub['pub'])
+    else:
+        journal = ''
     year = pub['pubdate'][0:4]
     string += journal + ' (' + year + ')'
     if 'volume' in pub.keys():
@@ -323,7 +353,10 @@ for pub in PUBS:
     # citation count
     #
     if CITATIONS:
-        c = pub['citation_count']
+        if 'citation_count' in pub.keys():
+            c = pub['citation_count']
+        else:
+            c = 0
         string += ' [{:d} citation{}]'.format(c, 's' * (c != 1))
     #
     # write it out
@@ -337,7 +370,7 @@ if OPENACCESS:
               '[OA]* = green open access')
 if CITATIONS:
     FID.write('\\\\[1em] \n Total number of citations: {:d}'.\
-              format(sum([pub['citation_count'] for pub in PUBS])))
+              format(sum([pub['citation_count'] for pub in PUBS if 'citation_count' in pub.keys()])))
 
 if RUN in ['tex', 'pdf']:
     FID.write(FOOT)
