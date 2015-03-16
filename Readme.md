@@ -2,6 +2,10 @@
 
 This repository contains a script to create an authors publication list by  querying the [NASA ADS][ADS]. The output will be either LaTeX (just `\items` or a complete document) or the compiled PDF.
 
+Here is an example:
+
+![Publication list example](./example.jpg)
+
 The script can automatically include citation counts (`-c`) or open access information (`-oa`).
 
 The [NASA ADS][ADS] query uses the [ADS developper API][API] for which you will need a dev key. The key needs to be specified by the option `-d` or as environment variable `ADS_DEV_KEY`. If you don't have a key, see [here](https://github.com/adsabs/adsabs-dev-api#signup--access).
