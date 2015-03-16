@@ -204,6 +204,8 @@ def replace_journal_name(journal):
         return r'\prl'
     elif journal == u'Protostars and Planets V':
         return r'PPV'
+    elif journal == u'Protostars and Planets VI':
+        return r'PPVI'
     elif journal == u'Science':
         return r'\sci'
     elif journal == u'The Astronomical Journal':
@@ -212,6 +214,10 @@ def replace_journal_name(journal):
         return r'\apj'
     elif journal == u'The Astrophysical Journal Supplement Series':
         return r'\apjs'
+    else:
+        print('Unknown Journal {}, no replacement done!'.format(journal))
+        return journal
+        
 #
 # read in_press file
 #
