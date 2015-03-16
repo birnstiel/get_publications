@@ -308,12 +308,13 @@ for pub in PUBS:
     # append the open access property
     #
     if OPENACCESS:
-        if 'OPENACCESS' in pub['property']:
+        if 'PUB_OPENACCESS' in pub['property']:
             #
             # paper is open access
             #
             string += ' [OA]'
-        elif any(['arXiv' in i for i in pub['identifier']]):
+        elif 'OPENACCESS' in pub['property']:
+        # or any(['arXiv' in i for i in pub['identifier']]):
             #
             # paper is on arxiv
             #
