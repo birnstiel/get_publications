@@ -94,7 +94,10 @@ if __name__ == '__main__':
         help='include only publications before (including) this year',\
         type=float, default=1e6)
     PARSER.add_argument('-lid', '--library-id',\
-        help='Use personal library with this name instead of a general query',\
+        help='Use personal library with this id instead of a general query (needs also --library-name)',\
+        type=str, default=None)
+    PARSER.add_argument('-ln', '--library-name',\
+        help='Use personal library with this name instead of a general query (needs also --library-id)',\
         type=str, default=None)
     ARGS = PARSER.parse_args()
 
@@ -241,12 +244,23 @@ print('Done ')
 #
 sys.stdout.write('- getting publication data from NASA ADS ... ')
 sys.stdout.flush()
-if ARGS.library_id==None:
-    URL = r'http://adslabs.org/adsabs/api/search/?q=author:"' + AUTHOR + ',+' +\
-        AUTHOR_F[0] + '"&filter=property:refereed&rows=200&dev_key=' + DEVKEY
+URL = r'https://api.adsabs.harvard.edu/v1/search/query?q=author:%22'+AUTHOR+',+'+AUTHOR_F[0]+'%22&rows=200&fl=author,title,pub,pubdate,year,volume,page,bibcode,citation_count,property,doi,abstract&fq=property:refereed&sort=pubdate+desc';
+if ARGS.library_id==None and ARGS.library_name==None:
+    pass
+elif ARGS.library_id==None or ARGS.library_name==None:
+    raise ArgumentError('both or none of --library-id and --library-name need to be specified')
 else:
-    URL = r'http://adslabs.org/adsabs/api/search/?dev_key='+DEVKEY+'&q=%2A%3A%2A&bigquery='+ARGS.library_id
-PUBS = json.load(urllib2.urlopen(URL))['results']['docs']
+    raise ArgumentError('private libraries are not yet implemented for the new ADS API')
+    URL = r'https://api.adsabs.harvard.edu/v1/search/query?q=author:%22'+AUTHOR+',+'+AUTHOR_F[0]+'%22&rows=200&fl=author,title,pub,pubdate,year,volume,page,bibcode,citation_count,property,doi,abstract&fq=property:refereed&sort=pubdate+desc';
+    #URL  = r'http://adsabs.harvard.edu/cgi-bin/export_privlib?libid='+ARGS.library_id+'&libname='+ARGS.library_name
+    #BIBCODES = [b['bibcode'] for b in json.load(urllib2.urlopen(URL))['entries']]
+    #URL = r'http://adslabs.org/adsabs/api/search/?q='+\
+    #    'bibcode:' + '&bibcode:'.join(BIBCODES) +\
+    #    '&rows=2000&dev_key=' + DEVKEY
+
+request  = urllib2.Request(URL, headers={"Authorization" : "Bearer "+DEVKEY})
+contents = urllib2.urlopen(request).read()
+PUBS     = json.loads(contents)['response']['docs']
 print('Done')
 #
 # apply the database and year filters
